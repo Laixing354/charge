@@ -98,7 +98,7 @@ textarea { resize: vertical; font-family: var(--font-mono); font-size: 13px; lin
 .ghost.warn { color: var(--danger); border-color: var(--danger); }
 
 .row.dim { opacity: 0.6; }
-.photo { display: block; width: 100%; max-height: 180px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); cursor: zoom-in; }
+.photo { display: block; flex: none; width: 56px; height: 56px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); cursor: zoom-in; }
 .lightbox { position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,0.88); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px; cursor: zoom-out; }
 .lightbox img { max-width: 100%; max-height: 80%; object-fit: contain; border-radius: 6px; }
 .lightbox p { margin: 0; color: #fff; font-size: 14px; text-align: center; }
@@ -368,6 +368,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
       name.appendChild(el('span', null, p.area + (p.mine ? ' · 仅我可见' : '')));
 
       top.appendChild(star);
+      top.appendChild(photoFor(p));
       top.appendChild(name);
       top.appendChild(el('span', 'code', p.code));
 
@@ -377,11 +378,6 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
       go.target = '_blank';
       go.rel = 'noopener noreferrer';
       acts.appendChild(go);
-
-      var cp = el('button', 'ghost', '复制链接');
-      cp.type = 'button';
-      cp.addEventListener('click', function () { copyText(linkOf(p.code), '链接已复制'); });
-      acts.appendChild(cp);
 
       if (!p.mine) {
         var hid = isHidden(p.code);
@@ -416,7 +412,6 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
       }
 
       li.appendChild(top);
-      li.appendChild(photoFor(p));
       li.appendChild(acts);
       ul.appendChild(li);
     });
