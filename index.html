@@ -91,6 +91,8 @@ textarea { resize: vertical; font-family: var(--font-mono); font-size: 13px; lin
 .ghost { border: 1px solid var(--line); background: none; border-radius: 6px; padding: 9px 12px; font-size: 13px; cursor: pointer; }
 .ghost.warn { color: var(--danger); border-color: var(--danger); }
 
+.row.dim { opacity: 0.6; }
+.toggle { align-self: flex-start; }
 .empty { border: 1px dashed var(--line); border-radius: 8px; padding: 24px 16px; text-align: center; color: var(--muted); }
 
 details { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
@@ -122,6 +124,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
   <div class="meta"><span id="count"></span><span id="sync"></span></div>
 
   <ul class="list" id="list"></ul>
+  <button class="ghost toggle" type="button" id="toggle-hidden" hidden></button>
 
   <details id="addBox">
     <summary>添加我自己的桩（只有我这部手机可见）</summary>
@@ -155,19 +158,21 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     </div>
   </details>
 
-  <p class="foot">共享列表来自 piles.txt，每次打开自动更新。收藏和“我自己的桩”只保存在这部手机的浏览器里，清理缓存会丢失。状态以联横充电页面显示为准。</p>
+  <p class="foot">共享列表来自 piles.txt，每次打开自动更新。收藏、隐藏和“我自己的桩”只保存在这部手机的浏览器里，清理缓存会丢失。状态以联横充电页面显示为准。</p>
 </div>
 <div class="toast" id="toast" hidden></div>
 
 <script>
 (function () {
   var BASE = 'https://www.washpayer.com/user/index.html#/pages/device/selectPort?chargeIndex=&logicalCode=';
-  var K_MINE = 'charge-mine-v1', K_FAVS = 'charge-favs-v1', K_SHARED = 'charge-shared-v1', K_OLD = 'charge-piles-v1';
+  var K_MINE = 'charge-mine-v1', K_FAVS = 'charge-favs-v1', K_SHARED = 'charge-shared-v1', K_OLD = 'charge-piles-v1', K_HIDDEN = 'charge-hidden-v1';
   var DEFAULT_AREA = '未分组';
 
   var shared = readJSON(K_SHARED, []);   // 来自 piles.txt（上次成功读取的缓存）
   var mine = [];                          // 我自己添加的
   var favs = [];                          // 收藏的编号
+  var hidden = [];                        // 我在自己手机上隐藏的编号
+  var showHidden = false;
   var syncMsg = '共享列表读取中…';
   var query = '', area = '全部', pendingDelete = null, toastTimer = null;
 
@@ -185,6 +190,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
   function initLocal() {
     mine = readJSON(K_MINE, null);
     favs = readJSON(K_FAVS, []);
+    hidden = readJSON(K_HIDDEN, []);
     if (mine === null) {
       // 从旧版本迁移：旧版把全部桩和收藏都存在一起
       mine = [];
@@ -224,6 +230,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
   }
 
   function isFav(code) { return favs.indexOf(code) !== -1; }
+  function isHidden(code) { return hidden.indexOf(code) !== -1; }
 
   function toast(msg) {
     var t = $('toast');
@@ -249,13 +256,17 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
 
   function areasOf() {
     var seen = {}, out = [];
-    merged().forEach(function (p) { if (!seen[p.area]) { seen[p.area] = 1; out.push(p.area); } });
+    merged().forEach(function (p) {
+      if (!showHidden && isHidden(p.code)) return;
+      if (!seen[p.area]) { seen[p.area] = 1; out.push(p.area); }
+    });
     return out.sort(function (a, b) { return a.localeCompare(b, 'zh'); });
   }
 
   function visible() {
     var kw = query.trim().toLowerCase();
     return merged().filter(function (p) {
+      if (!showHidden && isHidden(p.code)) return false;
       if (area === '★ 收藏' && !isFav(p.code)) return false;
       if (area !== '全部' && area !== '★ 收藏' && p.area !== area) return false;
       if (!kw) return true;
@@ -292,16 +303,20 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
   function renderList() {
     var ul = $('list');
     ul.textContent = '';
-    var all = merged();
+    var all = merged().filter(function (p) { return showHidden || !isHidden(p.code); });
     var rows = visible();
+    var nHidden = hidden.filter(function (c) { return merged().some(function (p) { return p.code === c; }); }).length;
+    var tg = $('toggle-hidden');
+    tg.hidden = nHidden === 0;
+    tg.textContent = showHidden ? '不再显示已隐藏的桩' : '显示已隐藏的桩（' + nHidden + '）';
     $('count').textContent = '共 ' + rows.length + ' 个桩' + (rows.length !== all.length ? '（全部 ' + all.length + '）' : '');
     $('sync').textContent = syncMsg;
     if (!rows.length) {
-      ul.appendChild(el('li', 'empty', all.length ? '没有符合条件的桩。换个关键词试试。' : '还没有桩。管理员在 piles.txt 里添加，或在下面添加自己的桩。'));
+      ul.appendChild(el('li', 'empty', all.length ? '没有符合条件的桩。换个关键词试试。' : (nHidden ? '桩都被你隐藏了。点下面的按钮可以重新显示。' : '还没有桩。管理员在 piles.txt 里添加，或在下面添加自己的桩。')));
       return;
     }
     rows.forEach(function (p) {
-      var li = el('li', 'row');
+      var li = el('li', 'row' + (isHidden(p.code) ? ' dim' : ''));
       var top = el('div', 'top');
 
       var fav = isFav(p.code);
@@ -334,6 +349,18 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
       cp.type = 'button';
       cp.addEventListener('click', function () { copyText(linkOf(p.code), '链接已复制'); });
       acts.appendChild(cp);
+
+      if (!p.mine) {
+        var hid = isHidden(p.code);
+        var hb = el('button', 'ghost', hid ? '取消隐藏' : '隐藏');
+        hb.type = 'button';
+        hb.addEventListener('click', function () {
+          var i = hidden.indexOf(p.code);
+          if (i === -1) { hidden.push(p.code); toast('已隐藏，仅在这部手机上生效'); } else { hidden.splice(i, 1); }
+          writeJSON(K_HIDDEN, hidden); render();
+        });
+        acts.appendChild(hb);
+      }
 
       if (p.mine) {
         var ed = el('button', 'ghost', '编辑');
@@ -418,6 +445,8 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     if (add + upd) $('bulk').value = '';
     toast('新增 ' + add + '，更新 ' + upd + (skip ? '，' + skip + ' 个已在共享列表' : '') + (bad ? '，' + bad + ' 行格式不对' : ''));
   });
+
+  $('toggle-hidden').addEventListener('click', function () { showHidden = !showHidden; render(); });
 
   $('backup-copy').addEventListener('click', function () { copyText(allText(), '已复制全部桩'); });
 
