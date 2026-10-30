@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>充电桩速查</title>
-<meta name="description" content="不用到现场扫码，一点就看校园充电桩的空位。">
+<meta name="description" content="不用现场扫码，点击即可看到校园充电桩的情况。">
 <meta property="og:title" content="充电桩速查">
-<meta property="og:description" content="不用到现场扫码，一点就看校园充电桩的空位。">
+<meta property="og:description" content="不用现场扫码，点击即可看到校园充电桩的情况。">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://laixing354.github.io/charge/share.png">
 <link rel="icon" href="share.png">
@@ -126,8 +126,8 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
 <div class="wrap">
   <header>
     <h1>充电桩速查</h1>
-    <p class="sub">不用走到桩前扫码。点“查看空位”，直接打开联横充电里这个桩的插口页面。请在微信里打开本页。</p>
-    <p class="sub">提示：一次只看一个桩，隔几秒再看下一个。连续快速点击，联横可能提示“操作过于频繁”并暂时限制你的账号。</p>
+    <p class="sub">不用现场扫码。在微信中打开本页，点“查看空位”，即可查看充电桩的对应使用情况。</p>
+    <p class="sub">提示：一次看一个桩，隔几秒再点下一个，避免连续快速点击，造成提示“操作过于频繁”并暂时限制账号查看权限。</p>
   </header>
 
   <input type="search" id="q" placeholder="搜索名称、位置或桩编号" autocomplete="off" aria-label="搜索充电桩">
@@ -138,9 +138,9 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
   <button class="ghost toggle" type="button" id="toggle-hidden" hidden></button>
 
   <details id="addBox">
-    <summary>添加我自己的桩（只有我这部手机可见）</summary>
+    <summary>添加自己需要的其他充电桩</summary>
     <form class="pane" id="form" autocomplete="off">
-      <label for="f-code">桩编号（二维码下面那串，如 G443444）
+      <label for="f-code">充电桩编号（二维码下面，如 G443444）
         <input type="text" id="f-code" inputmode="latin" autocapitalize="characters" required>
       </label>
       <label for="f-name">名称
@@ -151,25 +151,25 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
         <datalist id="areas"></datalist>
       </label>
       <button class="btn" type="submit" id="f-submit">保存</button>
-      <p class="hint">想让所有人都看到，请把桩写进仓库里的 piles.txt。</p>
+      <p class="hint">想让所有人都看到，可联系管理员。</p>
     </form>
   </details>
 
   <details>
-    <summary>批量导入 / 导出全部</summary>
+    <summary>批量导入 / 导出</summary>
     <div class="pane">
-      <label for="bulk">每行一个桩，格式：编号 名称 区域（区域可省略，用空格隔开）。导入后只在我这部手机可见。
+      <label for="bulk">每行一个桩，格式：编号 名称 区域（区域可省略，用空格隔开）。导入后只在自己的手机可见。
         <textarea id="bulk" rows="5" placeholder="G443444 3号楼东侧1号 3号楼&#10;G443445 3号楼东侧2号 3号楼"></textarea>
       </label>
       <button class="btn" type="button" id="bulk-go">导入</button>
-      <label for="backup">当前全部桩。管理员把这段文字粘贴到仓库的 piles.txt，所有人就能看到
+      <label for="backup">当前全部充电桩。可联系管理员，让所有人就能看到。
         <textarea id="backup" rows="6" readonly></textarea>
       </label>
       <button class="btn" type="button" id="backup-copy">复制全部</button>
     </div>
   </details>
 
-  <p class="foot">共享列表来自 piles.txt，每次打开自动更新。收藏、隐藏和“我自己的桩”只保存在这部手机的浏览器里，清理缓存会丢失。状态以联横充电页面显示为准。</p>
+  <p class="foot">每次打开自动更新。收藏、隐藏和“我自己的桩”只保存在自己手机的浏览器里，清理缓存会丢失。</p>
 </div>
 <div class="toast" id="toast" hidden></div>
 <div class="lightbox" id="lightbox" hidden><img id="lb-img" alt=""><p id="lb-cap"></p></div>
