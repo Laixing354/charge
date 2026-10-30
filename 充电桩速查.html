@@ -1,0 +1,374 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>充电桩速查</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+/* Layout: 单栏手机列表。顶部搜索和区域筛选，下面每行一个桩，主按钮直达联横充电的选择插口页。 */
+:root {
+  --bg: #f2f4f1;
+  --surface: #ffffff;
+  --ink: #17211d;
+  --muted: #5c6a64;
+  --line: #d9dfdb;
+  --accent: #f2b705;      /* 桩上贴纸的黄色 */
+  --on-accent: #1a1500;
+  --tag-bg: #fff1bd;
+  --tag-fg: #5f4900;
+  --focus: #1f6f5a;
+  --danger: #b3261e;
+  --font-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121614; --surface: #1b211e; --ink: #eaefec; --muted: #98a59e; --line: #2c3631;
+    --tag-bg: #3a3210; --tag-fg: #f6d567; --focus: #f2b705; --danger: #ff8a80;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121614; --surface: #1b211e; --ink: #eaefec; --muted: #98a59e; --line: #2c3631;
+  --tag-bg: #3a3210; --tag-fg: #f6d567; --focus: #f2b705; --danger: #ff8a80;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  padding-block: 20px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+h1 { font-size: 22px; line-height: 1.3; margin: 0; letter-spacing: 0.01em; text-wrap: balance; }
+.sub { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+
+button, input, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+input[type="text"], input[type="search"], textarea {
+  width: 100%; min-width: 0;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+  padding: 10px 12px;
+}
+textarea { resize: vertical; font-family: var(--font-mono); font-size: 13px; line-height: 1.6; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 999px;
+  padding: 4px 12px; font-size: 13px; cursor: pointer;
+}
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+.meta { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; letter-spacing: 0.04em; }
+
+.list { display: flex; flex-direction: column; gap: 8px; padding: 0; margin: 0; list-style: none; }
+.row { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.top { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.star { border: 0; background: none; font-size: 20px; line-height: 1; cursor: pointer; color: var(--muted); padding: 2px 4px; }
+.star[aria-pressed="true"] { color: var(--accent); }
+.name { flex: 1; min-width: 0; }
+.name b { display: block; font-weight: 700; overflow-wrap: anywhere; }
+.name span { color: var(--muted); font-size: 12px; }
+.code { font-family: var(--font-mono); font-weight: 600; font-size: 13px; background: var(--tag-bg); color: var(--tag-fg); padding: 2px 8px; border-radius: 4px; letter-spacing: 0.04em; }
+.acts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.go {
+  flex: 1 1 140px; text-align: center; text-decoration: none;
+  background: var(--accent); color: var(--on-accent); font-weight: 700;
+  padding: 10px 14px; border-radius: 6px;
+}
+.go:active { filter: brightness(0.92); }
+.ghost { border: 1px solid var(--line); background: none; border-radius: 6px; padding: 9px 12px; font-size: 13px; cursor: pointer; }
+.ghost.warn { color: var(--danger); border-color: var(--danger); }
+
+.empty { border: 1px dashed var(--line); border-radius: 8px; padding: 24px 16px; text-align: center; color: var(--muted); }
+
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+summary { padding: 12px; font-weight: 500; cursor: pointer; }
+.pane { padding: 0 12px 12px; display: flex; flex-direction: column; gap: 10px; }
+.pane label { font-size: 13px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+.pane .hint { font-size: 12px; color: var(--muted); margin: 0; }
+.btn { background: var(--ink); color: var(--bg); border: 0; border-radius: 6px; padding: 10px 14px; font-weight: 500; cursor: pointer; align-self: flex-start; }
+
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 6px; font-size: 13px;
+  max-width: calc(100% - 32px);
+}
+.foot { color: var(--muted); font-size: 12px; margin: 0; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>充电桩速查</h1>
+    <p class="sub">不用走到桩前扫码。点“查看空位”，直接打开联横充电里这个桩的插口页面。</p>
+  </header>
+
+  <input type="search" id="q" placeholder="搜索名称、位置或桩编号" autocomplete="off" aria-label="搜索充电桩">
+  <div class="chips" id="chips" role="group" aria-label="按区域筛选"></div>
+  <div class="meta"><span id="count"></span><span>★ 收藏的排在最前</span></div>
+
+  <ul class="list" id="list"></ul>
+
+  <details id="addBox">
+    <summary>添加或修改一个桩</summary>
+    <form class="pane" id="form" autocomplete="off">
+      <label for="f-code">桩编号（二维码下面那串，如 G443444）
+        <input type="text" id="f-code" inputmode="latin" autocapitalize="characters" required>
+      </label>
+      <label for="f-name">名称
+        <input type="text" id="f-name" placeholder="如：3号楼东侧 2号桩" required>
+      </label>
+      <label for="f-area">区域
+        <input type="text" id="f-area" list="areas" placeholder="如：3号楼、操场、图书馆">
+        <datalist id="areas"></datalist>
+      </label>
+      <button class="btn" type="submit" id="f-submit">保存</button>
+      <p class="hint">编号已存在时，会更新它的名称和区域。</p>
+    </form>
+  </details>
+
+  <details>
+    <summary>批量导入 / 备份</summary>
+    <div class="pane">
+      <label for="bulk">每行一个桩，格式：编号 名称 区域（区域可省略，用空格隔开）
+        <textarea id="bulk" rows="5" placeholder="G443444 3号楼东侧1号 3号楼&#10;G443445 3号楼东侧2号 3号楼"></textarea>
+      </label>
+      <button class="btn" type="button" id="bulk-go">导入</button>
+      <label for="backup">当前全部桩（复制保存，换手机时粘贴到上面导入）
+        <textarea id="backup" rows="5" readonly></textarea>
+      </label>
+      <button class="btn" type="button" id="backup-copy">复制备份</button>
+    </div>
+  </details>
+
+  <p class="foot">数据只保存在这台设备的浏览器里，清理缓存会丢失，建议隔一段时间复制一次备份。状态以联横充电页面显示为准。</p>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function () {
+  var BASE = 'https://www.washpayer.com/user/index.html#/pages/device/selectPort?chargeIndex=&logicalCode=';
+  var KEY = 'charge-piles-v1';
+  var DEFAULT_AREA = '未分组';
+  var SEED = [{ code: 'G443444', name: '示例桩（点“编辑”改名）', area: DEFAULT_AREA, fav: false }];
+
+  var piles = load();
+  var query = '';
+  var area = '全部';
+  var pendingDelete = null;
+  var toastTimer = null;
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function load() {
+    try {
+      var s = localStorage.getItem(KEY);
+      if (s) { var a = JSON.parse(s); if (Array.isArray(a)) return a; }
+    } catch (e) {}
+    return SEED.map(function (p) { return Object.assign({}, p); });
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(piles)); } catch (e) {} }
+
+  function normCode(s) { return String(s || '').trim().toUpperCase(); }
+  function validCode(s) { return /^[A-Z0-9_-]{3,32}$/.test(s); }
+  function linkOf(code) { return BASE + encodeURIComponent(code); }
+
+  function toast(msg) {
+    var t = $('toast');
+    t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.hidden = true; }, 2200);
+  }
+
+  function copyText(text, okMsg) {
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(ta);
+      toast(ok ? okMsg : '复制失败，请手动选中文字复制');
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { toast(okMsg); }, fallback);
+    } else { fallback(); }
+  }
+
+  function areasOf() {
+    var seen = {}, out = [];
+    piles.forEach(function (p) { var a = p.area || DEFAULT_AREA; if (!seen[a]) { seen[a] = 1; out.push(a); } });
+    return out.sort(function (a, b) { return a.localeCompare(b, 'zh'); });
+  }
+
+  function visible() {
+    var kw = query.trim().toLowerCase();
+    return piles.filter(function (p) {
+      var a = p.area || DEFAULT_AREA;
+      if (area === '★ 收藏' && !p.fav) return false;
+      if (area !== '全部' && area !== '★ 收藏' && a !== area) return false;
+      if (!kw) return true;
+      return (p.name + ' ' + a + ' ' + p.code).toLowerCase().indexOf(kw) !== -1;
+    }).sort(function (x, y) {
+      if (!!x.fav !== !!y.fav) return x.fav ? -1 : 1;
+      var ax = x.area || DEFAULT_AREA, ay = y.area || DEFAULT_AREA;
+      if (ax !== ay) return ax.localeCompare(ay, 'zh');
+      return x.name.localeCompare(y.name, 'zh', { numeric: true });
+    });
+  }
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  function renderChips() {
+    var box = $('chips');
+    box.textContent = '';
+    var names = ['全部', '★ 收藏'].concat(areasOf());
+    if (names.indexOf(area) === -1) area = '全部';
+    names.forEach(function (n) {
+      var b = el('button', 'chip', n);
+      b.type = 'button';
+      b.setAttribute('aria-pressed', n === area ? 'true' : 'false');
+      b.addEventListener('click', function () { area = n; render(); });
+      box.appendChild(b);
+    });
+  }
+
+  function renderList() {
+    var ul = $('list');
+    ul.textContent = '';
+    var rows = visible();
+    $('count').textContent = '共 ' + rows.length + ' 个桩' + (rows.length !== piles.length ? '（全部 ' + piles.length + '）' : '');
+    if (!rows.length) {
+      var li = el('li', 'empty', piles.length ? '没有符合条件的桩。换个关键词，或在下面添加。' : '还没有桩。在下面添加第一个。');
+      ul.appendChild(li);
+      return;
+    }
+    rows.forEach(function (p) {
+      var li = el('li', 'row');
+      var top = el('div', 'top');
+
+      var star = el('button', 'star', p.fav ? '★' : '☆');
+      star.type = 'button';
+      star.setAttribute('aria-pressed', p.fav ? 'true' : 'false');
+      star.setAttribute('aria-label', p.fav ? '取消收藏' : '收藏');
+      star.addEventListener('click', function () { p.fav = !p.fav; save(); render(); });
+
+      var name = el('div', 'name');
+      name.appendChild(el('b', null, p.name));
+      name.appendChild(el('span', null, p.area || DEFAULT_AREA));
+
+      top.appendChild(star);
+      top.appendChild(name);
+      top.appendChild(el('span', 'code', p.code));
+
+      var acts = el('div', 'acts');
+      var go = el('a', 'go', '查看空位');
+      go.href = linkOf(p.code);
+      go.target = '_blank';
+      go.rel = 'noopener noreferrer';
+
+      var cp = el('button', 'ghost', '复制链接');
+      cp.type = 'button';
+      cp.addEventListener('click', function () { copyText(linkOf(p.code), '链接已复制'); });
+
+      var ed = el('button', 'ghost', '编辑');
+      ed.type = 'button';
+      ed.addEventListener('click', function () { startEdit(p); });
+
+      var del = el('button', 'ghost' + (pendingDelete === p.code ? ' warn' : ''), pendingDelete === p.code ? '确认删除' : '删除');
+      del.type = 'button';
+      del.addEventListener('click', function () {
+        if (pendingDelete === p.code) {
+          piles = piles.filter(function (x) { return x.code !== p.code; });
+          pendingDelete = null; save(); render(); toast('已删除');
+        } else {
+          pendingDelete = p.code; renderList();
+          setTimeout(function () { if (pendingDelete === p.code) { pendingDelete = null; renderList(); } }, 3000);
+        }
+      });
+
+      acts.appendChild(go); acts.appendChild(cp); acts.appendChild(ed); acts.appendChild(del);
+      li.appendChild(top); li.appendChild(acts);
+      ul.appendChild(li);
+    });
+  }
+
+  function backupText() {
+    return piles.map(function (p) { return [p.code, p.name.replace(/\s+/g, ''), p.area || DEFAULT_AREA].join(' '); }).join('\n');
+  }
+
+  function render() {
+    renderChips();
+    renderList();
+    var dl = $('areas');
+    dl.textContent = '';
+    areasOf().forEach(function (a) { var o = document.createElement('option'); o.value = a; dl.appendChild(o); });
+    $('backup').value = backupText();
+  }
+
+  function upsert(code, name, areaName) {
+    var found = piles.filter(function (p) { return p.code === code; })[0];
+    if (found) { found.name = name; found.area = areaName || DEFAULT_AREA; return 'update'; }
+    piles.push({ code: code, name: name, area: areaName || DEFAULT_AREA, fav: false });
+    return 'add';
+  }
+
+  function startEdit(p) {
+    $('addBox').open = true;
+    $('f-code').value = p.code;
+    $('f-name').value = p.name;
+    $('f-area').value = p.area || '';
+    $('f-submit').textContent = '更新';
+    $('addBox').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    $('f-name').focus();
+  }
+
+  $('q').addEventListener('input', function (e) { query = e.target.value; renderList(); });
+
+  $('form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var code = normCode($('f-code').value);
+    var name = $('f-name').value.trim();
+    if (!validCode(code)) { toast('编号只能含字母、数字，3到32位'); return; }
+    if (!name) { toast('请填写名称'); return; }
+    var r = upsert(code, name, $('f-area').value.trim());
+    save(); render();
+    $('form').reset(); $('f-submit').textContent = '保存';
+    toast(r === 'add' ? '已添加' : '已更新');
+  });
+
+  $('bulk-go').addEventListener('click', function () {
+    var lines = $('bulk').value.split(/\r?\n/);
+    var add = 0, upd = 0, bad = 0;
+    lines.forEach(function (line) {
+      line = line.trim();
+      if (!line) return;
+      var t = line.split(/[\s,，\t]+/);
+      var code = normCode(t[0]);
+      if (!validCode(code)) { bad++; return; }
+      var r = upsert(code, t[1] || code, t[2] || '');
+      if (r === 'add') add++; else upd++;
+    });
+    save(); render();
+    if (add + upd) $('bulk').value = '';
+    toast('新增 ' + add + '，更新 ' + upd + (bad ? '，' + bad + ' 行格式不对' : ''));
+  });
+
+  $('backup-copy').addEventListener('click', function () { copyText(backupText(), '备份已复制'); });
+
+  render();
+})();
+</script>
+
+</body></html>
