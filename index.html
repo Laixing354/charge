@@ -98,6 +98,10 @@ textarea { resize: vertical; font-family: var(--font-mono); font-size: 13px; lin
 .ghost.warn { color: var(--danger); border-color: var(--danger); }
 
 .row.dim { opacity: 0.6; }
+.photo { display: block; width: 100%; max-height: 180px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); cursor: zoom-in; }
+.lightbox { position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,0.88); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px; cursor: zoom-out; }
+.lightbox img { max-width: 100%; max-height: 80%; object-fit: contain; border-radius: 6px; }
+.lightbox p { margin: 0; color: #fff; font-size: 14px; text-align: center; }
 .toggle { align-self: flex-start; }
 .empty { border: 1px dashed var(--line); border-radius: 8px; padding: 24px 16px; text-align: center; color: var(--muted); }
 
@@ -168,6 +172,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
   <p class="foot">共享列表来自 piles.txt，每次打开自动更新。收藏、隐藏和“我自己的桩”只保存在这部手机的浏览器里，清理缓存会丢失。状态以联横充电页面显示为准。</p>
 </div>
 <div class="toast" id="toast" hidden></div>
+<div class="lightbox" id="lightbox" hidden><img id="lb-img" alt=""><p id="lb-cap"></p></div>
 
 <script>
 (function () {
@@ -293,6 +298,27 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     return n;
   }
 
+  // 位置照片：仓库里 photos/编号.jpg（找不到再试 .png），没有就不显示
+  var EXTS = ['jpg', 'png'];
+  function photoFor(p) {
+    var img = document.createElement('img');
+    img.className = 'photo';
+    img.alt = p.name + '的位置';
+    img.hidden = true;
+    var i = 0;
+    function tryNext() {
+      if (i >= EXTS.length) { if (img.parentNode) img.parentNode.removeChild(img); return; }
+      img.src = 'photos/' + encodeURIComponent(p.code) + '.' + EXTS[i++];
+    }
+    img.onload = function () { img.hidden = false; };
+    img.onerror = tryNext;
+    img.addEventListener('click', function () {
+      $('lb-img').src = img.src; $('lb-cap').textContent = p.name + ' · ' + p.code; $('lightbox').hidden = false;
+    });
+    tryNext();
+    return img;
+  }
+
   function renderChips() {
     var box = $('chips');
     box.textContent = '';
@@ -389,7 +415,9 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
         acts.appendChild(del);
       }
 
-      li.appendChild(top); li.appendChild(acts);
+      li.appendChild(top);
+      li.appendChild(photoFor(p));
+      li.appendChild(acts);
       ul.appendChild(li);
     });
   }
@@ -452,6 +480,9 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     if (add + upd) $('bulk').value = '';
     toast('新增 ' + add + '，更新 ' + upd + (skip ? '，' + skip + ' 个已在共享列表' : '') + (bad ? '，' + bad + ' 行格式不对' : ''));
   });
+
+  $('lightbox').addEventListener('click', function () { this.hidden = true; $('lb-img').removeAttribute('src'); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') $('lightbox').hidden = true; });
 
   $('toggle-hidden').addEventListener('click', function () { showHidden = !showHidden; render(); });
 
