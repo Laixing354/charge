@@ -103,6 +103,8 @@ textarea { resize: vertical; font-family: var(--font-mono); font-size: 13px; lin
 .lightbox img { max-width: 100%; max-height: 80%; object-fit: contain; border-radius: 6px; }
 .lightbox p { margin: 0; color: #fff; font-size: 14px; text-align: center; }
 .toggle { align-self: flex-start; }
+.donate { align-self: flex-start; }
+.credit { font-weight: 500; color: var(--ink); }
 .empty { border: 1px dashed var(--line); border-radius: 8px; padding: 24px 16px; text-align: center; color: var(--muted); }
 
 details { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
@@ -156,20 +158,29 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
   </details>
 
   <details>
-    <summary>批量导入 / 导出</summary>
+    <summary>批量导入</summary>
     <div class="pane">
       <label for="bulk">每行一个桩，格式：编号 名称 区域（区域可省略，用空格隔开）。导入后只在自己的手机可见。
         <textarea id="bulk" rows="5" placeholder="G443444 3号楼东侧1号 3号楼&#10;G443445 3号楼东侧2号 3号楼"></textarea>
       </label>
       <button class="btn" type="button" id="bulk-go">导入</button>
-      <label for="backup">当前全部充电桩。可联系管理员，让所有人就能看到。
-        <textarea id="backup" rows="6" readonly></textarea>
-      </label>
-      <button class="btn" type="button" id="backup-copy">复制全部</button>
+      <div id="adminBox" class="pane" style="padding:0" hidden>
+        <label for="backup">【管理员】当前全部充电桩，复制后粘贴到 piles.txt
+          <textarea id="backup" rows="6" readonly></textarea>
+        </label>
+        <button class="btn" type="button" id="backup-copy">复制全部</button>
+      </div>
     </div>
   </details>
 
-  <p class="foot">每次打开自动更新。收藏、隐藏和“我自己的桩”只保存在自己手机的浏览器里，清理缓存会丢失。</p>
+  <div class="acts">
+    <button class="ghost" type="button" id="contact" hidden>联系作者</button>
+    <button class="ghost donate" type="button" id="donate" hidden>赞赏作者</button>
+  </div>
+
+  <p class="foot credit">制作：某某同学</p>
+
+  <p class="foot">每次打开自动更新。收藏、删除和“我自己的桩”只保存在自己手机的浏览器里，清理缓存会丢失。本页面是个人制作的小工具。</p>
 </div>
 <div class="toast" id="toast" hidden></div>
 <div class="lightbox" id="lightbox" hidden><img id="lb-img" alt=""><p id="lb-cap"></p></div>
@@ -341,11 +352,11 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     var nHidden = hidden.filter(function (c) { return merged().some(function (p) { return p.code === c; }); }).length;
     var tg = $('toggle-hidden');
     tg.hidden = nHidden === 0;
-    tg.textContent = showHidden ? '不再显示已隐藏的桩' : '显示已隐藏的桩（' + nHidden + '）';
+    tg.textContent = showHidden ? '收起已删除' : '已删除（' + nHidden + '）';
     $('count').textContent = '共 ' + rows.length + ' 个桩' + (rows.length !== all.length ? '（全部 ' + all.length + '）' : '');
     $('sync').textContent = syncMsg;
     if (!rows.length) {
-      ul.appendChild(el('li', 'empty', all.length ? '没有符合条件的桩。换个关键词试试。' : (nHidden ? '桩都被你隐藏了。点下面的按钮可以重新显示。' : '还没有桩。管理员在 piles.txt 里添加，或在下面添加自己的桩。')));
+      ul.appendChild(el('li', 'empty', all.length ? '没有符合条件的桩。换个关键词试试。' : (nHidden ? '桩都已删除，点下方“已删除”可恢复。' : '还没有桩。管理员在 piles.txt 里添加，或在下面添加自己的桩。')));
       return;
     }
     rows.forEach(function (p) {
@@ -380,13 +391,21 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
       acts.appendChild(go);
 
       if (!p.mine) {
-        var hid = isHidden(p.code);
-        var hb = el('button', 'ghost', hid ? '取消隐藏' : '隐藏');
+        var gone = isHidden(p.code);
+        var confirming = pendingDelete === p.code;
+        var hb = el('button', 'ghost' + (confirming ? ' warn' : ''), gone ? '恢复' : (confirming ? '确认删除' : '删除'));
         hb.type = 'button';
         hb.addEventListener('click', function () {
-          var i = hidden.indexOf(p.code);
-          if (i === -1) { hidden.push(p.code); toast('已隐藏，仅在这部手机上生效'); } else { hidden.splice(i, 1); }
-          writeJSON(K_HIDDEN, hidden); render();
+          if (gone) {
+            hidden.splice(hidden.indexOf(p.code), 1);
+            writeJSON(K_HIDDEN, hidden); render(); toast('已恢复');
+          } else if (confirming) {
+            hidden.push(p.code); pendingDelete = null;
+            writeJSON(K_HIDDEN, hidden); render(); toast('已删除');
+          } else {
+            pendingDelete = p.code; renderList();
+            setTimeout(function () { if (pendingDelete === p.code) { pendingDelete = null; renderList(); } }, 3000);
+          }
         });
         acts.appendChild(hb);
       }
@@ -478,6 +497,53 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
 
   $('lightbox').addEventListener('click', function () { this.hidden = true; $('lb-img').removeAttribute('src'); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') $('lightbox').hidden = true; });
+
+  // 管理员模式：网址后面加 ?admin=1 才显示“导出”，?admin=0 关闭
+  (function () {
+    var on = false;
+    try {
+      var v = new URLSearchParams(location.search).get('admin');
+      if (v === '1') localStorage.setItem('charge-admin', '1');
+      if (v === '0') localStorage.removeItem('charge-admin');
+      on = localStorage.getItem('charge-admin') === '1';
+    } catch (e) { on = /[?&]admin=1/.test(location.search); }
+    $('adminBox').hidden = !on;
+  })();
+
+  // 在仓库里找图片：依次试 jpg、png、jpeg，找到就回调它的文件名
+  function findImage(base, cb) {
+    var exts = ['jpg', 'png', 'jpeg'], i = 0;
+    (function next() {
+      if (i >= exts.length) return;
+      var url = base + '.' + exts[i++];
+      var probe = new Image();
+      probe.onload = function () { cb(url); };
+      probe.onerror = next;
+      probe.src = url;
+    })();
+  }
+
+  // 联系作者：仓库里有 contact.jpg（或 png）才显示按钮
+  findImage('contact', function (url) {
+    var b = $('contact');
+    b.hidden = false;
+    b.addEventListener('click', function () {
+      $('lb-img').src = url;
+      $('lb-cap').textContent = '扫码添加，桩的位置有误或想补充新桩都可以找我';
+      $('lightbox').hidden = false;
+    });
+  });
+
+  // 赞赏：仓库里有 donate.jpg（或 png）才显示按钮
+  findImage('donate', function (url) {
+    var b = $('donate');
+    b.hidden = false;
+    b.addEventListener('click', function () {
+      $('lb-img').src = url;
+      $('lb-cap').textContent = '微信扫码，自愿赞赏，不赞赏也不影响使用';
+      $('lightbox').hidden = false;
+    });
+  });
 
   $('toggle-hidden').addEventListener('click', function () { showHidden = !showHidden; render(); });
 
