@@ -128,7 +128,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
 <div class="wrap">
   <header>
     <h1>充电桩速查</h1>
-    <p class="sub">不用现场扫码。在微信中打开本页，点“查看空位”，即可查看充电桩的对应使用情况。</p>
+    <p class="sub">不用现场扫码。在微信中打开本页，点“查看空位”，即可查看充电桩的使用情况，并正常充电。</p>
     <p class="sub">提示：一次看一个桩，隔几秒再点下一个，避免连续快速点击，造成提示“操作过于频繁”并暂时限制账号查看权限。</p>
   </header>
 
@@ -197,7 +197,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
   var hidden = [];                        // 我在自己手机上删除的编号
   var ovr = [];                           // 我对共享桩名称/区域的修改（只在自己手机上）
   var showHidden = false;
-  var syncMsg = '共享列表读取中…';
+  var syncMsg = '列表读取中…';
   var query = '', area = '全部', pendingDelete = null, toastTimer = null;
 
   var $ = function (id) { return document.getElementById(id); };
@@ -360,7 +360,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     var tg = $('toggle-hidden');
     tg.hidden = nHidden === 0;
     tg.textContent = showHidden ? '收起已删除' : '已删除（' + nHidden + '）';
-    $('count').textContent = '共 ' + rows.length + ' 个桩' + (rows.length !== all.length ? '（全部 ' + all.length + '）' : '');
+    $('count').textContent = '共 ' + rows.length + ' 个充电桩' + (rows.length !== all.length ? '（全部 ' + all.length + '）' : '');
     $('sync').textContent = syncMsg;
     if (!rows.length) {
       ul.appendChild(el('li', 'empty', all.length ? '没有符合条件的桩。换个关键词试试。' : (nHidden ? '桩都已删除，点下方“已删除”可恢复。' : '还没有桩。管理员在 piles.txt 里添加，或在下面添加自己的桩。')));
@@ -583,17 +583,17 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
   $('backup-copy').addEventListener('click', function () { copyText(allText(), '已复制全部桩'); });
 
   function loadShared() {
-    if (!window.fetch) { syncMsg = '共享列表：使用上次缓存'; render(); return; }
+    if (!window.fetch) { syncMsg = '列表：使用上次缓存'; render(); return; }
     fetch('piles.txt?t=' + Date.now(), { cache: 'no-store' })
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
       .then(function (text) {
         shared = parseText(text).filter(Boolean);
         writeJSON(K_SHARED, shared);
-        syncMsg = '共享列表已更新';
+        syncMsg = '列表已更新';
         render();
       })
       .catch(function () {
-        syncMsg = shared.length ? '读取失败，显示上次缓存' : '共享列表读取失败';
+        syncMsg = shared.length ? '读取失败，显示上次缓存' : '列表读取失败';
         render();
       });
   }
