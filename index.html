@@ -188,13 +188,14 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
 <script>
 (function () {
   var BASE = 'https://www.washpayer.com/user/index.html#/pages/device/selectPort?chargeIndex=&logicalCode=';
-  var K_MINE = 'charge-mine-v1', K_FAVS = 'charge-favs-v1', K_SHARED = 'charge-shared-v1', K_OLD = 'charge-piles-v1', K_HIDDEN = 'charge-hidden-v1';
+  var K_MINE = 'charge-mine-v1', K_FAVS = 'charge-favs-v1', K_SHARED = 'charge-shared-v1', K_OLD = 'charge-piles-v1', K_HIDDEN = 'charge-hidden-v1', K_OVR = 'charge-ovr-v1';
   var DEFAULT_AREA = '未分组';
 
   var shared = readJSON(K_SHARED, []);   // 来自 piles.txt（上次成功读取的缓存）
   var mine = [];                          // 我自己添加的
   var favs = [];                          // 收藏的编号
-  var hidden = [];                        // 我在自己手机上隐藏的编号
+  var hidden = [];                        // 我在自己手机上删除的编号
+  var ovr = [];                           // 我对共享桩名称/区域的修改（只在自己手机上）
   var showHidden = false;
   var syncMsg = '共享列表读取中…';
   var query = '', area = '全部', pendingDelete = null, toastTimer = null;
@@ -214,6 +215,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     mine = readJSON(K_MINE, null);
     favs = readJSON(K_FAVS, []);
     hidden = readJSON(K_HIDDEN, []);
+    ovr = readJSON(K_OVR, []);
     if (mine === null) {
       // 从旧版本迁移：旧版把全部桩和收藏都存在一起
       mine = [];
@@ -247,7 +249,12 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
 
   function merged() {
     var seen = {}, out = [];
-    shared.forEach(function (p) { if (!seen[p.code]) { seen[p.code] = 1; out.push({ code: p.code, name: p.name, area: p.area || DEFAULT_AREA, mine: false }); } });
+    shared.forEach(function (p) {
+      if (seen[p.code]) return;
+      seen[p.code] = 1;
+      var o = ovr.filter(function (x) { return x.code === p.code; })[0];
+      out.push({ code: p.code, name: o ? o.name : p.name, area: (o ? o.area : p.area) || DEFAULT_AREA, mine: false, edited: !!o });
+    });
     mine.forEach(function (p) { if (!seen[p.code]) { seen[p.code] = 1; out.push({ code: p.code, name: p.name, area: p.area || DEFAULT_AREA, mine: true }); } });
     return out;
   }
@@ -376,7 +383,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
 
       var name = el('div', 'name');
       name.appendChild(el('b', null, p.name));
-      name.appendChild(el('span', null, p.area + (p.mine ? ' · 仅我可见' : '')));
+      name.appendChild(el('span', null, p.area + (p.mine ? ' · 仅我可见' : (p.edited ? ' · 已修改' : ''))));
 
       top.appendChild(star);
       top.appendChild(photoFor(p));
@@ -389,6 +396,22 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
       go.target = '_blank';
       go.rel = 'noopener noreferrer';
       acts.appendChild(go);
+
+      if (!p.mine && !isHidden(p.code)) {
+        var eb = el('button', 'ghost', '编辑');
+        eb.type = 'button';
+        eb.addEventListener('click', function () { startEdit(p); });
+        acts.appendChild(eb);
+        if (p.edited) {
+          var rb = el('button', 'ghost', '还原');
+          rb.type = 'button';
+          rb.addEventListener('click', function () {
+            ovr = ovr.filter(function (x) { return x.code !== p.code; });
+            writeJSON(K_OVR, ovr); render(); toast('已还原');
+          });
+          acts.appendChild(rb);
+        }
+      }
 
       if (!p.mine) {
         var gone = isHidden(p.code);
@@ -460,6 +483,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
   function startEdit(p) {
     $('addBox').open = true;
     $('f-code').value = p.code;
+    $('f-code').readOnly = !p.mine;
     $('f-name').value = p.name;
     $('f-area').value = p.area === DEFAULT_AREA ? '' : p.area;
     $('f-submit').textContent = '更新';
@@ -476,9 +500,18 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     if (!validCode(code)) { toast('编号只能含字母、数字，3到32位'); return; }
     if (!name) { toast('请填写名称'); return; }
     var r = upsertMine(code, name, $('f-area').value.trim());
-    if (r === 'shared') { toast('这个编号已在共享列表里，要改请改 piles.txt'); return; }
+    if (r === 'shared') {
+      var base = shared.filter(function (x) { return x.code === code; })[0];
+      var a = $('f-area').value.trim() || DEFAULT_AREA;
+      ovr = ovr.filter(function (x) { return x.code !== code; });
+      if (name !== base.name || a !== (base.area || DEFAULT_AREA)) ovr.push({ code: code, name: name, area: a });
+      writeJSON(K_OVR, ovr); render();
+      $('form').reset(); $('f-code').readOnly = false; $('f-submit').textContent = '保存';
+      toast('已修改');
+      return;
+    }
     writeJSON(K_MINE, mine); render();
-    $('form').reset(); $('f-submit').textContent = '保存';
+    $('form').reset(); $('f-code').readOnly = false; $('f-submit').textContent = '保存';
     toast(r === 'add' ? '已添加' : '已更新');
   });
 
