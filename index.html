@@ -103,6 +103,7 @@ textarea { resize: vertical; font-family: var(--font-mono); font-size: 13px; lin
 .lightbox img { max-width: 100%; max-height: 80%; object-fit: contain; border-radius: 6px; }
 .lightbox p { margin: 0; color: #fff; font-size: 14px; text-align: center; }
 .toggle { align-self: flex-start; }
+.note { margin: 0; font-size: 13px; line-height: 1.6; color: var(--muted); background: var(--bg); padding: 8px 10px; border-radius: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .donate { align-self: flex-start; }
 .credit { font-weight: 500; color: var(--ink); }
 .empty { border: 1px dashed var(--line); border-radius: 8px; padding: 24px 16px; text-align: center; color: var(--muted); }
@@ -152,6 +153,9 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
         <input type="text" id="f-area" list="areas" placeholder="如：3号楼、操场、图书馆">
         <datalist id="areas"></datalist>
       </label>
+      <label for="f-note">位置说明（可选）
+        <input type="text" id="f-note" placeholder="如：宿舍楼东门出来左转，车棚旁边">
+      </label>
       <button class="btn" type="submit" id="f-submit">保存</button>
       <p class="hint">想让所有人都看到，可联系管理员。</p>
     </form>
@@ -160,7 +164,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
   <details>
     <summary>批量导入</summary>
     <div class="pane">
-      <label for="bulk">每行一个桩，格式：编号 名称 区域（区域可省略，用空格隔开）。导入后只在自己的手机可见。
+      <label for="bulk">每行一个桩，格式：编号 名称 区域 位置说明（后两项可省略，用空格隔开）。导入后只在自己的手机可见。
         <textarea id="bulk" rows="5" placeholder="G443444 3号楼东侧1号 3号楼&#10;G443445 3号楼东侧2号 3号楼"></textarea>
       </label>
       <button class="btn" type="button" id="bulk-go">导入</button>
@@ -198,7 +202,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
   var ovr = [];                           // 我对共享桩名称/区域的修改（只在自己手机上）
   var showHidden = false;
   var syncMsg = '列表读取中…';
-  var query = '', area = '全部', pendingDelete = null, toastTimer = null;
+  var query = '', area = '全部', pendingDelete = null, toastTimer = null, openNotes = {};
 
   var $ = function (id) { return document.getElementById(id); };
 
@@ -239,10 +243,10 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     String(text || '').split(/\r?\n/).forEach(function (line) {
       line = line.trim();
       if (!line || line.charAt(0) === '#') return;
-      var t = line.split(/[\s,，\t]+/);
-      var code = normCode(t[0]);
+      var m = line.match(/^([^\s,，]+)(?:[\s,，]+([^\s,，]+))?(?:[\s,，]+([^\s,，]+))?(?:[\s,，]+(.+))?$/);
+      var code = m ? normCode(m[1]) : '';
       if (!validCode(code)) { out.push(null); return; }
-      out.push({ code: code, name: t[1] || code, area: t[2] || DEFAULT_AREA });
+      out.push({ code: code, name: m[2] || code, area: m[3] || DEFAULT_AREA, note: (m[4] || '').trim() });
     });
     return out;
   }
@@ -253,9 +257,9 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
       if (seen[p.code]) return;
       seen[p.code] = 1;
       var o = ovr.filter(function (x) { return x.code === p.code; })[0];
-      out.push({ code: p.code, name: o ? o.name : p.name, area: (o ? o.area : p.area) || DEFAULT_AREA, mine: false, edited: !!o });
+      out.push({ code: p.code, name: o ? o.name : p.name, area: (o ? o.area : p.area) || DEFAULT_AREA, note: (o && o.note != null ? o.note : p.note) || '', mine: false, edited: !!o });
     });
-    mine.forEach(function (p) { if (!seen[p.code]) { seen[p.code] = 1; out.push({ code: p.code, name: p.name, area: p.area || DEFAULT_AREA, mine: true }); } });
+    mine.forEach(function (p) { if (!seen[p.code]) { seen[p.code] = 1; out.push({ code: p.code, name: p.name, area: p.area || DEFAULT_AREA, note: p.note || '', mine: true }); } });
     return out;
   }
 
@@ -397,6 +401,13 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
       go.rel = 'noopener noreferrer';
       acts.appendChild(go);
 
+      if (p.note) {
+        var nb = el('button', 'ghost', openNotes[p.code] ? '收起说明' : '位置说明');
+        nb.type = 'button';
+        nb.addEventListener('click', function () { openNotes[p.code] = !openNotes[p.code]; renderList(); });
+        acts.appendChild(nb);
+      }
+
       if (!p.mine && !isHidden(p.code)) {
         var eb = el('button', 'ghost', '编辑');
         eb.type = 'button';
@@ -455,12 +466,13 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
 
       li.appendChild(top);
       li.appendChild(acts);
+      if (p.note && openNotes[p.code]) li.appendChild(el('p', 'note', p.note));
       ul.appendChild(li);
     });
   }
 
   function allText() {
-    return merged().map(function (p) { return [p.code, p.name.replace(/\s+/g, ''), p.area].join(' '); }).join('\n');
+    return merged().map(function (p) { return [p.code, p.name.replace(/\s+/g, ''), p.area].concat(p.note ? [p.note.replace(/\s+/g, ' ')] : []).join(' '); }).join('\n');
   }
 
   function render() {
@@ -472,24 +484,34 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     $('backup').value = allText();
   }
 
-  function upsertMine(code, name, areaName) {
+  function upsertMine(code, name, areaName, note) {
     if (shared.some(function (p) { return p.code === code; })) return 'shared';
     var found = mine.filter(function (p) { return p.code === code; })[0];
-    if (found) { found.name = name; found.area = areaName || DEFAULT_AREA; return 'update'; }
-    mine.push({ code: code, name: name, area: areaName || DEFAULT_AREA });
+    if (found) { found.name = name; found.area = areaName || DEFAULT_AREA; found.note = note || ''; return 'update'; }
+    mine.push({ code: code, name: name, area: areaName || DEFAULT_AREA, note: note || '' });
     return 'add';
+  }
+
+  function showCodeField(show) {
+    $('f-code').closest('label').hidden = !show;
+    $('f-code').readOnly = !show;
   }
 
   function startEdit(p) {
     $('addBox').open = true;
     $('f-code').value = p.code;
-    $('f-code').readOnly = !p.mine;
+    showCodeField(p.mine);
     $('f-name').value = p.name;
     $('f-area').value = p.area === DEFAULT_AREA ? '' : p.area;
+    $('f-note').value = p.note || '';
     $('f-submit').textContent = '更新';
     $('addBox').scrollIntoView({ behavior: 'smooth', block: 'center' });
     $('f-name').focus();
   }
+
+  $('addBox').addEventListener('toggle', function () {
+    if (!this.open) { $('form').reset(); showCodeField(true); $('f-submit').textContent = '保存'; }
+  });
 
   $('q').addEventListener('input', function (e) { query = e.target.value; renderList(); });
 
@@ -499,19 +521,20 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     var name = $('f-name').value.trim();
     if (!validCode(code)) { toast('编号只能含字母、数字，3到32位'); return; }
     if (!name) { toast('请填写名称'); return; }
-    var r = upsertMine(code, name, $('f-area').value.trim());
+    var note = $('f-note').value.trim();
+    var r = upsertMine(code, name, $('f-area').value.trim(), note);
     if (r === 'shared') {
       var base = shared.filter(function (x) { return x.code === code; })[0];
       var a = $('f-area').value.trim() || DEFAULT_AREA;
       ovr = ovr.filter(function (x) { return x.code !== code; });
-      if (name !== base.name || a !== (base.area || DEFAULT_AREA)) ovr.push({ code: code, name: name, area: a });
+      if (name !== base.name || a !== (base.area || DEFAULT_AREA) || note !== (base.note || '')) ovr.push({ code: code, name: name, area: a, note: note });
       writeJSON(K_OVR, ovr); render();
-      $('form').reset(); $('f-code').readOnly = false; $('f-submit').textContent = '保存';
+      $('form').reset(); showCodeField(true); $('f-submit').textContent = '保存';
       toast('已修改');
       return;
     }
     writeJSON(K_MINE, mine); render();
-    $('form').reset(); $('f-code').readOnly = false; $('f-submit').textContent = '保存';
+    $('form').reset(); showCodeField(true); $('f-submit').textContent = '保存';
     toast(r === 'add' ? '已添加' : '已更新');
   });
 
@@ -520,7 +543,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     var add = 0, upd = 0, skip = 0, bad = 0;
     items.forEach(function (it) {
       if (!it) { bad++; return; }
-      var r = upsertMine(it.code, it.name, it.area);
+      var r = upsertMine(it.code, it.name, it.area, it.note);
       if (r === 'add') add++; else if (r === 'update') upd++; else skip++;
     });
     writeJSON(K_MINE, mine); render();
