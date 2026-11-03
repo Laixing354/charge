@@ -134,7 +134,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
   <header>
     <h1>充电桩速查</h1>
     <p class="sub">不用现场扫码。在微信中打开本页，点“查看空位”，即可查看充电桩的使用情况，并正常充电。</p>
-    <p class="sub">提示：一次看一个桩，隔几秒再点下一个，避免连续快速点击，造成提示“操作过于频繁”，暂时限制查看。</p>
+    <p class="sub">提示：一次看一个桩，隔几秒再点下一个，避免连续快速点击，造成提示“操作过于频繁”并暂时限制账号查看权限。</p>
   </header>
 
   <input type="search" id="q" placeholder="搜索名称、位置或桩编号" autocomplete="off" aria-label="搜索充电桩">
@@ -145,7 +145,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
   <button class="ghost toggle" type="button" id="toggle-hidden" hidden></button>
 
   <details id="addBox">
-    <summary>添加需要的其他充电桩</summary>
+    <summary>添加自己需要的其他充电桩</summary>
     <form class="pane" id="form" autocomplete="off">
       <label for="f-code">充电桩编号（二维码下面，如 G443444）
         <input type="text" id="f-code" inputmode="latin" autocapitalize="characters" required>
@@ -161,7 +161,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
         <input type="text" id="f-note" placeholder="如：宿舍楼东门出来左转，车棚旁边">
       </label>
       <button class="btn" type="submit" id="f-submit">保存</button>
-      <p class="hint">仅保存在自己手机上。希望所有人可见，点击下方联系管理员。</p>
+      <p class="hint">想让所有人都看到，可联系管理员。</p>
     </form>
   </details>
 
@@ -186,9 +186,9 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     <button class="ghost donate" type="button" id="donate" hidden>赞赏作者</button>
   </div>
 
-  <p class="foot credit">制作：李同学</p>
+  <p class="foot credit">制作：某某同学</p>
 
-  <p class="foot">每次打开自动更新。收藏、删除和“自己的桩”只保存在自己手机的浏览器里，清理缓存会丢失。本页面是个人制作的小工具。</p>
+  <p class="foot">每次打开自动更新。收藏、删除和“我自己的桩”只保存在自己手机的浏览器里，清理缓存会丢失。本页面是个人制作的小工具。</p>
 </div>
 <div class="toast" id="toast" hidden></div>
 <div class="lightbox" id="lightbox" hidden><img id="lb-img" alt=""><p id="lb-cap"></p></div>
@@ -298,10 +298,18 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
       if (!showHidden && isHidden(p.code)) return;
       if (!seen[p.area]) { seen[p.area] = 1; out.push(p.area); }
     });
-    return out.sort(function (a, b) { return a.localeCompare(b, 'zh'); });
+    return out;
+  }
+
+  // 区域的先后顺序：按它在 piles.txt 里第一次出现的位置
+  function areaOrder() {
+    var ord = {}, n = 0;
+    merged().forEach(function (p) { if (!(p.area in ord)) ord[p.area] = n++; });
+    return ord;
   }
 
   function visible() {
+    var ord = areaOrder();
     var kw = query.trim().toLowerCase();
     return merged().filter(function (p) {
       if (!showHidden && isHidden(p.code)) return false;
@@ -312,7 +320,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     }).sort(function (x, y) {
       var fx = isFav(x.code), fy = isFav(y.code);
       if (fx !== fy) return fx ? -1 : 1;
-      if (x.area !== y.area) return x.area.localeCompare(y.area, 'zh');
+      if (x.area !== y.area) return ord[x.area] - ord[y.area];
       return x.name.localeCompare(y.name, 'zh', { numeric: true });
     });
   }
@@ -371,7 +379,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     $('count').textContent = '共 ' + rows.length + ' 个充电桩' + (rows.length !== all.length ? '（全部 ' + all.length + '）' : '');
     $('sync').textContent = syncMsg;
     if (!rows.length) {
-      ul.appendChild(el('li', 'empty', all.length ? '没有符合条件的充电桩。换个关键词试试。' : (nHidden ? '桩都已删除，点下方“已删除”可恢复。' : '还没有桩。管理员在 piles.txt 里添加，或在下面添加自己的桩。')));
+      ul.appendChild(el('li', 'empty', all.length ? '没有符合条件的桩。换个关键词试试。' : (nHidden ? '桩都已删除，点下方“已删除”可恢复。' : '还没有桩。管理员在 piles.txt 里添加，或在下面添加自己的桩。')));
       return;
     }
     rows.forEach(function (p) {
@@ -589,7 +597,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     b.hidden = false;
     b.addEventListener('click', function () {
       $('lb-img').src = url;
-      $('lb-cap').textContent = '扫码添加，充电桩的位置有误或想补充都可以找我';
+      $('lb-cap').textContent = '扫码添加，桩的位置有误或想补充新桩都可以找我';
       $('lightbox').hidden = false;
     });
   });
@@ -600,7 +608,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     b.hidden = false;
     b.addEventListener('click', function () {
       $('lb-img').src = url;
-      $('lb-cap').textContent = '微信自愿赞赏，不赞赏也不影响使用';
+      $('lb-cap').textContent = '微信扫码，自愿赞赏，不赞赏也不影响使用';
       $('lightbox').hidden = false;
     });
   });
