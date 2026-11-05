@@ -133,8 +133,8 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
 <div class="wrap">
   <header>
     <h1>充电桩速查</h1>
-    <p class="sub">不用现场扫码。在微信中打开本页，点“查看空位”，即可查看充电桩的使用情况，并正常充电。</p>
-    <p class="sub">提示：一次看一个桩，隔几秒再点下一个，避免连续快速点击，造成提示“操作过于频繁”并暂时限制账号查看权限。</p>
+    <p class="sub">不用现场扫码。在微信中打开本页，点“查看空位”，可查看充电桩的使用情况，并正常充电。</p>
+    <p class="sub">提示：一次看一个桩，隔几秒再点下一个。避免连续快速点击，造成提示“操作过于频繁”并暂时限制账号查看权限。</p>
   </header>
 
   <input type="search" id="q" placeholder="搜索名称、位置或桩编号" autocomplete="off" aria-label="搜索充电桩">
@@ -145,7 +145,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
   <button class="ghost toggle" type="button" id="toggle-hidden" hidden></button>
 
   <details id="addBox">
-    <summary>添加自己需要的其他充电桩</summary>
+    <summary>添加需要的其他充电桩</summary>
     <form class="pane" id="form" autocomplete="off">
       <label for="f-code">充电桩编号（二维码下面，如 G443444）
         <input type="text" id="f-code" inputmode="latin" autocapitalize="characters" required>
@@ -161,14 +161,14 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
         <input type="text" id="f-note" placeholder="如：宿舍楼东门出来左转，车棚旁边">
       </label>
       <button class="btn" type="submit" id="f-submit">保存</button>
-      <p class="hint">想让所有人都看到，可联系管理员。</p>
+      <p class="hint">让所有人可见，联系管理员。</p>
     </form>
   </details>
 
   <details>
     <summary>批量导入</summary>
     <div class="pane">
-      <label for="bulk">每行一个桩，格式：编号 名称 区域 位置说明（后两项可省略，用空格隔开）。导入后只在自己的手机可见。
+      <label for="bulk">每行一个充电桩，格式：编号 名称 区域 位置说明（后两项可省略，用空格隔开）。导入后只在自己的手机可见。
         <textarea id="bulk" rows="5" placeholder="G443444 3号楼东侧1号 3号楼&#10;G443445 3号楼东侧2号 3号楼"></textarea>
       </label>
       <button class="btn" type="button" id="bulk-go">导入</button>
@@ -186,9 +186,9 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     <button class="ghost donate" type="button" id="donate" hidden>赞赏作者</button>
   </div>
 
-  <p class="foot credit">制作：某某同学</p>
+  <p class="foot credit">制作：李同学</p>
 
-  <p class="foot">每次打开自动更新。收藏、删除和“我自己的桩”只保存在自己手机的浏览器里，清理缓存会丢失。本页面是个人制作的小工具。</p>
+  <p class="foot">每次打开自动更新。收藏、删除和“自己的充电桩”保存在自己手机的浏览器里，清理缓存会丢失。本页面是个人制作的小工具。</p>
 </div>
 <div class="toast" id="toast" hidden></div>
 <div class="lightbox" id="lightbox" hidden><img id="lb-img" alt=""><p id="lb-cap"></p></div>
@@ -597,7 +597,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     b.hidden = false;
     b.addEventListener('click', function () {
       $('lb-img').src = url;
-      $('lb-cap').textContent = '扫码添加，桩的位置有误或想补充新桩都可以找我';
+      $('lb-cap').textContent = '扫码添加，充电桩的位置有误或者补充可以找我';
       $('lightbox').hidden = false;
     });
   });
