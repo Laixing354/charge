@@ -107,6 +107,14 @@ textarea { resize: vertical; font-family: var(--font-mono); font-size: 13px; lin
 .row .go { flex: 1 1 auto; min-width: 0; padding: 10px 8px; white-space: nowrap; }
 .row .ghost { flex: none; padding: 9px 10px; white-space: nowrap; }
 @media (max-width: 340px) { .row .acts { flex-wrap: wrap; } }
+.viewer { position: fixed; inset: 0; z-index: 30; background: var(--bg); display: flex; flex-direction: column; }
+.vbar { display: flex; align-items: center; gap: 10px; padding: calc(8px + env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) 8px max(12px, env(safe-area-inset-left, 0px)); background: var(--surface); border-bottom: 1px solid var(--line); }
+.vbar b { flex: 1; min-width: 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vbar a, .vbar button { flex: none; border: 1px solid var(--line); background: none; border-radius: 6px; padding: 7px 10px; font-size: 13px; text-decoration: none; color: var(--ink); cursor: pointer; white-space: nowrap; }
+.vhint { margin: 0; padding: 6px max(12px, env(safe-area-inset-left, 0px)); font-size: 12px; color: var(--muted); background: var(--surface); }
+.viewer iframe { flex: 1; width: 100%; border: 0; background: #fff; }
+.opt { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; color: var(--muted); }
+.opt input { margin-top: 3px; accent-color: var(--accent); }
 .note { margin: 0; font-size: 13px; line-height: 1.6; color: var(--muted); background: var(--bg); padding: 8px 10px; border-radius: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .donate { align-self: flex-start; }
 .credit { font-weight: 500; color: var(--ink); }
@@ -133,8 +141,8 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
 <div class="wrap">
   <header>
     <h1>充电桩速查</h1>
-    <p class="sub">不用现场扫码。在微信中打开本页，点“查看空位”，可查看充电桩的使用情况，并正常充电。</p>
-    <p class="sub">提示：一次看一个桩，隔几秒再点下一个。避免连续快速点击，造成提示“操作过于频繁”并暂时限制账号查看权限。</p>
+    <p class="sub">不用现场扫码。在微信中打开本页，点“查看空位”，即可查看充电桩的使用情况，并正常充电。</p>
+    <p class="sub">提示：一次看一个桩，隔几秒再点下一个，避免连续快速点击，造成提示“操作过于频繁”并暂时限制账号查看权限。</p>
   </header>
 
   <input type="search" id="q" placeholder="搜索名称、位置或桩编号" autocomplete="off" aria-label="搜索充电桩">
@@ -145,7 +153,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
   <button class="ghost toggle" type="button" id="toggle-hidden" hidden></button>
 
   <details id="addBox">
-    <summary>添加需要的其他充电桩</summary>
+    <summary>添加自己需要的其他充电桩</summary>
     <form class="pane" id="form" autocomplete="off">
       <label for="f-code">充电桩编号（二维码下面，如 G443444）
         <input type="text" id="f-code" inputmode="latin" autocapitalize="characters" required>
@@ -161,14 +169,14 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
         <input type="text" id="f-note" placeholder="如：宿舍楼东门出来左转，车棚旁边">
       </label>
       <button class="btn" type="submit" id="f-submit">保存</button>
-      <p class="hint">让所有人可见，联系管理员。</p>
+      <p class="hint">想让所有人都看到，可联系管理员。</p>
     </form>
   </details>
 
   <details>
     <summary>批量导入</summary>
     <div class="pane">
-      <label for="bulk">每行一个充电桩，格式：编号 名称 区域 位置说明（后两项可省略，用空格隔开）。导入后只在自己的手机可见。
+      <label for="bulk">每行一个桩，格式：编号 名称 区域 位置说明（后两项可省略，用空格隔开）。导入后只在自己的手机可见。
         <textarea id="bulk" rows="5" placeholder="G443444 3号楼东侧1号 3号楼&#10;G443445 3号楼东侧2号 3号楼"></textarea>
       </label>
       <button class="btn" type="button" id="bulk-go">导入</button>
@@ -186,9 +194,16 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     <button class="ghost donate" type="button" id="donate" hidden>赞赏作者</button>
   </div>
 
-  <p class="foot credit">制作：李同学</p>
+  <label class="opt" for="embed"><input type="checkbox" id="embed" checked><span>查看空位时在本页打开（试验功能）。打不开就取消勾选。</span></label>
 
-  <p class="foot">每次打开自动更新。收藏、删除和“自己的充电桩”保存在自己手机的浏览器里，清理缓存会丢失。本页面是个人制作的小工具。</p>
+  <p class="foot credit">制作：某某同学</p>
+
+  <p class="foot">每次打开自动更新。收藏、删除和“我自己的桩”只保存在自己手机的浏览器里，清理缓存会丢失。本页面是个人制作的小工具。</p>
+</div>
+<div class="viewer" id="viewer" hidden>
+  <div class="vbar"><b id="v-title"></b><a id="v-open" target="_blank" rel="noopener noreferrer">新页面打开</a><button id="v-close" type="button">关闭</button></div>
+  <p class="vhint">如果下面一直是空白，请点“新页面打开”。</p>
+  <iframe id="v-frame" title="联横充电"></iframe>
 </div>
 <div class="toast" id="toast" hidden></div>
 <div class="lightbox" id="lightbox" hidden><img id="lb-img" alt=""><p id="lb-cap"></p></div>
@@ -411,6 +426,11 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
       go.href = linkOf(p.code);
       go.target = '_blank';
       go.rel = 'noopener noreferrer';
+      go.addEventListener('click', function (e) {
+        if (!embedOn() || e.ctrlKey || e.metaKey || e.shiftKey) return;
+        e.preventDefault();
+        openViewer(p);
+      });
       acts.appendChild(go);
 
       if (p.note) {
@@ -504,6 +524,20 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     return 'add';
   }
 
+  function embedOn() { return $('embed').checked; }
+  function openViewer(p) {
+    $('v-title').textContent = p.name + ' · ' + p.code;
+    $('v-open').href = linkOf(p.code);
+    $('v-frame').src = linkOf(p.code);
+    $('viewer').hidden = false;
+    document.body.style.overflow = 'hidden';
+  }
+  function closeViewer() {
+    $('viewer').hidden = true;
+    $('v-frame').src = 'about:blank';
+    document.body.style.overflow = '';
+  }
+
   function showCodeField(show) {
     $('f-code').closest('label').hidden = !show;
     $('f-code').readOnly = !show;
@@ -563,8 +597,14 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     toast('新增 ' + add + '，更新 ' + upd + (skip ? '，' + skip + ' 个已在共享列表' : '') + (bad ? '，' + bad + ' 行格式不对' : ''));
   });
 
+  try { if (localStorage.getItem('charge-embed') === '0') $('embed').checked = false; } catch (e) {}
+  $('embed').addEventListener('change', function () {
+    try { localStorage.setItem('charge-embed', this.checked ? '1' : '0'); } catch (e) {}
+  });
+  $('v-close').addEventListener('click', closeViewer);
+
   $('lightbox').addEventListener('click', function () { this.hidden = true; $('lb-img').removeAttribute('src'); });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') $('lightbox').hidden = true; });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { $('lightbox').hidden = true; if (!$('viewer').hidden) closeViewer(); } });
 
   // 管理员模式：网址后面加 ?admin=1 才显示“导出”，?admin=0 关闭
   (function () {
@@ -597,7 +637,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     b.hidden = false;
     b.addEventListener('click', function () {
       $('lb-img').src = url;
-      $('lb-cap').textContent = '扫码添加，充电桩的位置有误或者补充可以找我';
+      $('lb-cap').textContent = '扫码添加，桩的位置有误或想补充新桩都可以找我';
       $('lightbox').hidden = false;
     });
   });
