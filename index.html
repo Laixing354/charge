@@ -107,14 +107,6 @@ textarea { resize: vertical; font-family: var(--font-mono); font-size: 13px; lin
 .row .go { flex: 1 1 auto; min-width: 0; padding: 10px 8px; white-space: nowrap; }
 .row .ghost { flex: none; padding: 9px 10px; white-space: nowrap; }
 @media (max-width: 340px) { .row .acts { flex-wrap: wrap; } }
-.viewer { position: fixed; inset: 0; z-index: 30; background: var(--bg); display: flex; flex-direction: column; }
-.vbar { display: flex; align-items: center; gap: 10px; padding: calc(8px + env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) 8px max(12px, env(safe-area-inset-left, 0px)); background: var(--surface); border-bottom: 1px solid var(--line); }
-.vbar b { flex: 1; min-width: 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.vbar a, .vbar button { flex: none; border: 1px solid var(--line); background: none; border-radius: 6px; padding: 7px 10px; font-size: 13px; text-decoration: none; color: var(--ink); cursor: pointer; white-space: nowrap; }
-.vhint { margin: 0; padding: 6px max(12px, env(safe-area-inset-left, 0px)); font-size: 12px; color: var(--muted); background: var(--surface); }
-.viewer iframe { flex: 1; width: 100%; border: 0; background: #fff; }
-.opt { display: flex; gap: 8px; align-items: flex-start; font-size: 12px; color: var(--muted); }
-.opt input { margin-top: 3px; accent-color: var(--accent); }
 .note { margin: 0; font-size: 13px; line-height: 1.6; color: var(--muted); background: var(--bg); padding: 8px 10px; border-radius: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .donate { align-self: flex-start; }
 .credit { font-weight: 500; color: var(--ink); }
@@ -194,16 +186,9 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     <button class="ghost donate" type="button" id="donate" hidden>赞赏作者</button>
   </div>
 
-  <label class="opt" for="embed"><input type="checkbox" id="embed" checked><span>查看空位时在本页打开（试验功能）。打不开就取消勾选。</span></label>
-
   <p class="foot credit">制作：某某同学</p>
 
   <p class="foot">每次打开自动更新。收藏、删除和“我自己的桩”只保存在自己手机的浏览器里，清理缓存会丢失。本页面是个人制作的小工具。</p>
-</div>
-<div class="viewer" id="viewer" hidden>
-  <div class="vbar"><b id="v-title"></b><a id="v-open" target="_blank" rel="noopener noreferrer">新页面打开</a><button id="v-close" type="button">关闭</button></div>
-  <p class="vhint">如果下面一直是空白，请点“新页面打开”。</p>
-  <iframe id="v-frame" title="联横充电"></iframe>
 </div>
 <div class="toast" id="toast" hidden></div>
 <div class="lightbox" id="lightbox" hidden><img id="lb-img" alt=""><p id="lb-cap"></p></div>
@@ -426,11 +411,6 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
       go.href = linkOf(p.code);
       go.target = '_blank';
       go.rel = 'noopener noreferrer';
-      go.addEventListener('click', function (e) {
-        if (!embedOn() || e.ctrlKey || e.metaKey || e.shiftKey) return;
-        e.preventDefault();
-        openViewer(p);
-      });
       acts.appendChild(go);
 
       if (p.note) {
@@ -524,20 +504,6 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     return 'add';
   }
 
-  function embedOn() { return $('embed').checked; }
-  function openViewer(p) {
-    $('v-title').textContent = p.name + ' · ' + p.code;
-    $('v-open').href = linkOf(p.code);
-    $('v-frame').src = linkOf(p.code);
-    $('viewer').hidden = false;
-    document.body.style.overflow = 'hidden';
-  }
-  function closeViewer() {
-    $('viewer').hidden = true;
-    $('v-frame').src = 'about:blank';
-    document.body.style.overflow = '';
-  }
-
   function showCodeField(show) {
     $('f-code').closest('label').hidden = !show;
     $('f-code').readOnly = !show;
@@ -597,14 +563,8 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     toast('新增 ' + add + '，更新 ' + upd + (skip ? '，' + skip + ' 个已在共享列表' : '') + (bad ? '，' + bad + ' 行格式不对' : ''));
   });
 
-  try { if (localStorage.getItem('charge-embed') === '0') $('embed').checked = false; } catch (e) {}
-  $('embed').addEventListener('change', function () {
-    try { localStorage.setItem('charge-embed', this.checked ? '1' : '0'); } catch (e) {}
-  });
-  $('v-close').addEventListener('click', closeViewer);
-
   $('lightbox').addEventListener('click', function () { this.hidden = true; $('lb-img').removeAttribute('src'); });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { $('lightbox').hidden = true; if (!$('viewer').hidden) closeViewer(); } });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') $('lightbox').hidden = true; });
 
   // 管理员模式：网址后面加 ?admin=1 才显示“导出”，?admin=0 关闭
   (function () {
