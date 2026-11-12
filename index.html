@@ -133,8 +133,8 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
 <div class="wrap">
   <header>
     <h1>充电桩速查</h1>
-    <p class="sub">不用现场扫码。在微信中打开本页，点“查看空位”，可查看充电桩的使用情况，并充电。</p>
-    <p class="sub">提示：一次看一个，隔几秒再点下一个，避免连续快速点击，造成提示“操作过于频繁”并暂时限制账号查看权限。</p>
+    <p class="sub">不用现场扫码。在微信中打开本页，点“查看空位”，即可查看充电桩的使用情况，并正常充电。</p>
+    <p class="sub">提示：一次看一个桩，隔几秒再点下一个，避免连续快速点击，造成提示“操作过于频繁”并暂时限制账号查看权限。</p>
   </header>
 
   <input type="search" id="q" placeholder="搜索名称、位置或桩编号" autocomplete="off" aria-label="搜索充电桩">
@@ -161,7 +161,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
         <input type="text" id="f-note" placeholder="如：宿舍楼东门出来左转，车棚旁边">
       </label>
       <button class="btn" type="submit" id="f-submit">保存</button>
-      <p class="hint">希望所有人可见，联系管理员。</p>
+      <p class="hint">想让所有人都看到，可联系管理员。</p>
     </form>
   </details>
 
@@ -177,6 +177,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
           <textarea id="backup" rows="6" readonly></textarea>
         </label>
         <button class="btn" type="button" id="backup-copy">复制全部</button>
+        <a class="btn" id="stats-link" href="#" target="_blank" rel="noopener noreferrer" hidden>查看访问统计</a>
       </div>
     </div>
   </details>
@@ -186,9 +187,9 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     <button class="ghost donate" type="button" id="donate" hidden>赞赏作者</button>
   </div>
 
-  <p class="foot credit">制作：李同学</p>
+  <p class="foot credit">制作：某某同学</p>
 
-  <p class="foot">每次打开自动更新。收藏、删除和“自己的桩”只保存在自己手机的浏览器里，清理缓存会丢失。本页面是个人制作的小工具。</p>
+  <p class="foot">每次打开自动更新。收藏、删除和“我自己的桩”只保存在自己手机的浏览器里，清理缓存会丢失。本页面是个人制作的小工具，只统计访问人数，不收集个人信息。</p>
 </div>
 <div class="toast" id="toast" hidden></div>
 <div class="lightbox" id="lightbox" hidden><img id="lb-img" alt=""><p id="lb-cap"></p></div>
@@ -504,6 +505,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     return 'add';
   }
 
+
   function showCodeField(show) {
     $('f-code').closest('label').hidden = !show;
     $('f-code').readOnly = !show;
@@ -563,8 +565,9 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     toast('新增 ' + add + '，更新 ' + upd + (skip ? '，' + skip + ' 个已在共享列表' : '') + (bad ? '，' + bad + ' 行格式不对' : ''));
   });
 
+
   $('lightbox').addEventListener('click', function () { this.hidden = true; $('lb-img').removeAttribute('src'); });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') $('lightbox').hidden = true; });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { $('lightbox').hidden = true; } });
 
   // 管理员模式：网址后面加 ?admin=1 才显示“导出”，?admin=0 关闭
   (function () {
@@ -576,6 +579,22 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
       on = localStorage.getItem('charge-admin') === '1';
     } catch (e) { on = /[?&]admin=1/.test(location.search); }
     $('adminBox').hidden = !on;
+
+    // 访问统计（GoatCounter，不用 cookie）。把下面引号里填上你注册的名字；留空就不统计。
+    // 管理员本人的访问不计入。
+    var GC_CODE = '';
+    if (GC_CODE) {
+      var link = $('stats-link');
+      link.href = 'https://' + GC_CODE + '.goatcounter.com';
+      link.hidden = false;
+      if (!on) {
+        var sc = document.createElement('script');
+        sc.async = true;
+        sc.src = 'https://gc.zgo.at/count.js';
+        sc.setAttribute('data-goatcounter', 'https://' + GC_CODE + '.goatcounter.com/count');
+        document.head.appendChild(sc);
+      }
+    }
   })();
 
   // 在仓库里找图片：依次试 jpg、png、jpeg，找到就回调它的文件名
