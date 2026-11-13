@@ -133,8 +133,8 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
 <div class="wrap">
   <header>
     <h1>充电桩速查</h1>
-    <p class="sub">不用现场扫码。在微信中打开本页，点“查看空位”，可查看充电桩的使用情况，正常充电。</p>
-    <p class="sub">提示：一次看一个，隔几秒再点下一个，避免连续快速点击，造成提示“操作过于频繁”并暂时限制账号查看权限。</p>
+    <p class="sub">不用现场扫码。在微信中打开本页，点“查看空位”，即可查看充电桩的使用情况，并正常充电。</p>
+    <p class="sub">提示：一次看一个桩，隔几秒再点下一个，避免连续快速点击，造成提示“操作过于频繁”并暂时限制账号查看权限。</p>
   </header>
 
   <input type="search" id="q" placeholder="搜索名称、位置或桩编号" autocomplete="off" aria-label="搜索充电桩">
@@ -145,7 +145,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
   <button class="ghost toggle" type="button" id="toggle-hidden" hidden></button>
 
   <details id="addBox">
-    <summary>添加需要的其他充电桩</summary>
+    <summary>添加自己需要的其他充电桩</summary>
     <form class="pane" id="form" autocomplete="off">
       <label for="f-code">充电桩编号（二维码下面，如 G443444）
         <input type="text" id="f-code" inputmode="latin" autocapitalize="characters" required>
@@ -187,9 +187,9 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     <button class="ghost donate" type="button" id="donate" hidden>赞赏作者</button>
   </div>
 
-  <p class="foot credit">制作：李同学</p>
+  <p class="foot credit">制作：某某同学</p>
 
-  <p class="foot">每次打开自动更新。收藏、删除和“自己的桩”只保存在自己手机的浏览器里，清理缓存会丢失。本页面是个人制作的小工具，不会收集个人信息。</p>
+  <p class="foot">每次打开自动更新。收藏、删除和“我自己的桩”只保存在自己手机的浏览器里，清理缓存会丢失。本页面是个人制作的小工具，会统计访问人数。</p>
 </div>
 <div class="toast" id="toast" hidden></div>
 <div class="lightbox" id="lightbox" hidden><img id="lb-img" alt=""><p id="lb-cap"></p></div>
@@ -380,7 +380,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     $('count').textContent = '共 ' + rows.length + ' 个充电桩' + (rows.length !== all.length ? '（全部 ' + all.length + '）' : '');
     $('sync').textContent = syncMsg;
     if (!rows.length) {
-      ul.appendChild(el('li', 'empty', all.length ? '没有符合条件的桩。换个关键词试试。' : (nHidden ? '桩都已删除，点下方“已删除”可恢复。' : '还没有桩。管理员添加，或在下面添加自己的桩。')));
+      ul.appendChild(el('li', 'empty', all.length ? '没有符合条件的桩。换个关键词试试。' : (nHidden ? '桩都已删除，点下方“已删除”可恢复。' : '还没有桩。管理员在 piles.txt 里添加，或在下面添加自己的桩。')));
       return;
     }
     rows.forEach(function (p) {
@@ -580,19 +580,21 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     } catch (e) { on = /[?&]admin=1/.test(location.search); }
     $('adminBox').hidden = !on;
 
-    // 访问统计（GoatCounter，不用 cookie）。把下面引号里填上你注册的名字；留空就不统计。
+    // 访问统计（51.la）。LA_ID 填 51.la 统计代码里的那串 ID；留空就不统计。
     // 管理员本人的访问不计入。
-    var GC_CODE = 'lgcharge';
-    if (GC_CODE) {
+    var LA_ID = '3RoS4OxVgGMfBAbC';
+    if (LA_ID) {
       var link = $('stats-link');
-      link.href = 'https://' + GC_CODE + '.goatcounter.com';
+      link.href = 'https://www.51.la/';
       link.hidden = false;
       if (!on) {
-        var sc = document.createElement('script');
-        sc.async = true;
-        sc.src = 'https://gc.zgo.at/count.js';
-        sc.setAttribute('data-goatcounter', 'https://' + GC_CODE + '.goatcounter.com/count');
-        document.head.appendChild(sc);
+        var sdk = document.createElement('script');
+        sdk.charset = 'UTF-8';
+        sdk.id = 'LA_COLLECT';
+        sdk.async = true;
+        sdk.src = 'https://sdk.51.la/js-sdk-pro.min.js';
+        sdk.onload = function () { try { window.LA.init({ id: LA_ID, ck: LA_ID }); } catch (e) {} };
+        document.head.appendChild(sdk);
       }
     }
   })();
@@ -616,7 +618,7 @@ summary { padding: 12px; font-weight: 500; cursor: pointer; }
     b.hidden = false;
     b.addEventListener('click', function () {
       $('lb-img').src = url;
-      $('lb-cap').textContent = '扫码添加，充电桩的位置有误或想补充都可以找我';
+      $('lb-cap').textContent = '扫码添加，桩的位置有误或想补充新桩都可以找我';
       $('lightbox').hidden = false;
     });
   });
